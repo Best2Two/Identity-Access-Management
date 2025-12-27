@@ -1,4 +1,4 @@
-﻿namespace IAMService.Data.DTOs
+﻿namespace IAMService.Data.Entities
 {
     public class JwtSettings
     {

@@ -1,7 +1,9 @@
 ﻿using IAMService.Data.DTOs;
+using IAMService.Data.Entities;
 using IAMService.Data.Identities;
 using IAMService.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace IAMService.Services
 {
@@ -17,7 +19,7 @@ namespace IAMService.Services
             _userManager = userManager;
         }
 
-        public async Task<AuthenticationResult> RegisterUserAsync(ApplicationUser user)
+        public async Task<AuthenticationResult> RegisterUserAsync(ApplicationUserDto user)
         {
 
             //Check if the user exists in the DB by them credential
@@ -28,7 +30,7 @@ namespace IAMService.Services
                     return AuthenticationResult.Failed("USER_EMAIL_REGISTERED_ALREADY");
             }
 
-            var existingUserByUsername = await _userManager.FindByNameAsync(user.Email);
+            var existingUserByUsername = await _userManager.FindByNameAsync(user.Username);
             if (existingUserByUsername != null)
             {
                 //fix here error string
@@ -50,57 +52,76 @@ namespace IAMService.Services
 
             if (!result.Succeeded)
             {
-                return AuthenticationResult.Failed("User can't be created into the DB");
+                return AuthenticationResult.Failed("User can't be created, please try again");
             }
 
 
             //Create jwt access token
             string accessToken = _tokenService.GenerateAccessToken(applicationUserIdentity);
+            string refreshToken = await _tokenService.GenerateRefreshTokenAsync(applicationUserIdentity);
 
-
-
-            return AuthenticationResult.Succeeded(accessToken, accessToken);
+            return AuthenticationResult.Succeeded("AUTHENTICATED_SUCCESS", accessToken, refreshToken);
 
 
         }
-
         public async Task<AuthenticationResult> LoginUserAsync(string loginIdentifier, string password)
         {
-            
-            //Returning invalid exact credential here is totally acceptable as they are public ones
-            var user = await _userManager.FindByEmailAsync(loginIdentifier);
-            
+            var normalizedInput = loginIdentifier.ToUpperInvariant();
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedInput ||
+                                          u.NormalizedUserName == normalizedInput);
+
             if (user == null)
             {
-                user = await _userManager.FindByNameAsync(loginIdentifier);
+                return AuthenticationResult.Failed("Invalid Credentials");
             }
 
-            if (user == null) return AuthenticationResult.Failed("INVALID_Username");
-
-            bool isPasswordMatch = await _userManager.CheckPasswordAsync(user, password);
+            var isPasswordMatch = await _userManager.CheckPasswordAsync(user, password);
 
             if (!isPasswordMatch)
             {
-                return AuthenticationResult.Failed("INVALID_Email");
+                return AuthenticationResult.Failed("Invalid Credentials");
             }
+
+            var accessToken = _tokenService.GenerateAccessToken(user);
+            var refreshToken = await _tokenService.GenerateRefreshTokenAsync(user);
+
+            return AuthenticationResult.Succeeded("AUTHENTICATED_SUCCESS", accessToken, refreshToken);
+
+        }
+        public async Task<AuthenticationResult> RefreshUserAsync(string refreshTokenString)
+        {
+            RefreshToken refreshToken = await _tokenService.GetStoredRefreshTokenAsync(refreshTokenString);
+
+            if (refreshToken == null || refreshToken.IsRevoked==true)
+            {
+                return AuthenticationResult.Failed("TOKEN_IS_NOT_VALID");
+            }
+            //Maybe considering a helper function heres
+            if(refreshToken.ExpiryDate <= DateTime.UtcNow)
+            {
+                return AuthenticationResult.Failed("TOKEN_IS_EXPIRED");
+            }
+            var accessToken = _tokenService.GenerateAccessToken(refreshToken.User);
             
-            //JWT Logic here
-
+            //Returning the refresh token here again maybe indicates a logical error
+            return AuthenticationResult.Succeeded("AUTHENTICATED_SUCCESS", accessToken, refreshToken.Token);
         }
-
-        public Task<AuthenticationResult> AuthenticateUserRequest(string securityToken)
+        public async Task<AuthenticationResult> LogoutUserAsync(string refreshTokenString)
         {
-            throw new NotImplementedException();
+            bool revoked  = await _tokenService.RevokeRefreshTokenAsync(refreshTokenString);
+            if (revoked)
+            {
+                return AuthenticationResult.Succeeded("TOKEN_REVOKED_SUCCESSFULLY");
+            }
+
+            //Rest of reclaiming revoking logic here
+            return AuthenticationResult.Failed("TOKEN_CANNOT_BE_REVOKED");
         }
 
-        public Task<AuthenticationResult> RefreshUserAsync(string refreshToken)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<AuthenticationResult> LogoutUserAsync(string refreshToken)
-        {
-            throw new NotImplementedException();
-        }
+
+
     }
 }

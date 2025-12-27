@@ -1,0 +1,19 @@
+﻿#ENV
+.env
+
+# Build outputs
+bin/
+obj/
+
+# NuGet packages
+*.nupkg
+packages/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+logs/

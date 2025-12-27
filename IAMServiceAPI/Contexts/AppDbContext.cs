@@ -1,32 +1,30 @@
-﻿using IAMService.Data.Identities;
+﻿using IAMService.Data.DTOs;
+using IAMService.Data.Identities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-
-public class AppDbContext : IdentityDbContext<ApplicationUserIdentity>
+namespace IAMService.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public class AppDbContext : IdentityDbContext<ApplicationUserIdentity>
     {
-    }
-
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
-    protected override void OnModelCreating(ModelBuilder builder)
-    {
-        base.OnModelCreating(builder);
-
-        builder.Entity<RefreshToken>(entity =>
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-            entity.HasKey(e => e.Id);
+        }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
-            // THE FIX IS HERE:
-            entity.HasOne(t => t.User)
-                  .WithMany()         
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
 
-                  .HasForeignKey(t => t.UserId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<RefreshToken>(entity =>
+            {
+                entity.ToTable("RefreshTokens");
 
-            entity.HasIndex(t => t.Token).IsUnique();
-        });
+                entity.HasOne(rt => rt.User)
+                      .WithMany()
+                      .HasForeignKey(rt => rt.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
     }
-
 }

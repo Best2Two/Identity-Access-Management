@@ -1,6 +1,6 @@
 ﻿namespace IAMService.Data.DTOs
 {
-    public class ApplicationUser
+    public class ApplicationUserDto
     {
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;

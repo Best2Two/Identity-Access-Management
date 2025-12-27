@@ -1,4 +1,4 @@
-﻿namespace IAMService.Data.DTOs
+﻿namespace IAMService.Data.Entities
 {
     public class AuthenticationResult
     {
@@ -6,10 +6,12 @@
         public string? AccessToken { get; private set; }
         public string? RefreshToken { get; private set; }
         public IEnumerable<string> Errors { get; private set; } = [];
+        public string? Message { get; private set; }
 
         private AuthenticationResult() { }
 
         public static AuthenticationResult Succeeded(
+            string message,
             string accessToken,
             string refreshToken
             )
@@ -19,18 +21,31 @@
                 Success = true,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                Errors = []
+                Errors = [],
+                Message = message
             };
         }
 
-        public static AuthenticationResult Failed(params string[] errors)
+        public static AuthenticationResult Succeeded(string message)
+        {
+            return new AuthenticationResult
+            {
+                Success = true,
+                AccessToken = null,
+                RefreshToken = null,
+                Message = message
+            };
+        }
+
+        public static AuthenticationResult Failed(string message, params string[] errors)
         {
             return new AuthenticationResult
             {
                 Success = false,
                 AccessToken = null,
                 RefreshToken = null,
-                Errors = errors
+                Errors = errors,
+                Message = message
             };
         }
     }
