@@ -22,19 +22,21 @@ namespace IAMService.Services
         public async Task<AuthenticationResult> RegisterUserAsync(ApplicationUserDto user)
         {
 
-            //Check if the user exists in the DB by them credential
-            var existingUserByEmail = await _userManager.FindByEmailAsync(user.Email);
-            if (existingUserByEmail != null)
-            {
-                    //fix here error string
-                    return AuthenticationResult.Failed("USER_EMAIL_REGISTERED_ALREADY");
-            }
+            // Check if the user exists in the DB by their credentials (single DB call)
+            var existingUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Email == user.Email || u.UserName == user.Username);
 
-            var existingUserByUsername = await _userManager.FindByNameAsync(user.Username);
-            if (existingUserByUsername != null)
+            if (existingUser != null)
             {
-                //fix here error string
-                return AuthenticationResult.Failed("USER_USERNAME_REGISTERED_ALREADY");
+                // Check which one exists
+                if (existingUser.Email == user.Email)
+                {
+                    return AuthenticationResult.Failed("USER_EMAIL_REGISTERED_ALREADY");
+                }
+                else
+                {
+                    return AuthenticationResult.Failed("USER_USERNAME_REGISTERED_ALREADY");
+                }
             }
 
             //Map current DTO with the applicationUserIdentity
@@ -42,7 +44,8 @@ namespace IAMService.Services
             {
                 Email = user.Email,
                 UserName = user.Username,
-                PhoneNumber = user.PhoneNumber,                
+                PhoneNumber = user.PhoneNumber,
+                Role = "User",
                 NormalizedUserName = _userManager.KeyNormalizer.NormalizeName(user.Username),
                 NormalizedEmail = _userManager.KeyNormalizer.NormalizeEmail(user.Email)
             };

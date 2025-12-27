@@ -1,6 +1,10 @@
 ﻿using IAMService.Data.DTOs;
+using IAMService.Data.DTOs.Controllers.Request;
 using IAMService.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace IAMService.Controllers
 {
@@ -9,28 +13,24 @@ namespace IAMService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthenticationService _authService;
+        private readonly ICredentialService _credService;
 
-        public AuthController(IAuthenticationService authService)
+        public AuthController(IAuthenticationService authService, ICredentialService credService)
         {
             _authService = authService;
+            _credService = credService;
         }
 
-        // POST api/auth/register
-        // URL: POST api/auth/register?email=x&username=y&password=z&phoneNumber=123
+        [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<IActionResult> Register(
-            [FromForm] string email,
-            [FromForm] string username,
-            [FromForm] string password,
-            [FromForm] string phoneNumber)
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
         {
-            // We map the raw params to the object the Service expects
             var userDto = new ApplicationUserDto
             {
-                Email = email,
-                Username = username,
-                Password = password,
-                PhoneNumber = phoneNumber
+                Email = request.Email,
+                Username = request.Username,
+                Password = request.Password,
+                PhoneNumber = request.PhoneNumber
             };
 
             var result = await _authService.RegisterUserAsync(userDto);
@@ -43,35 +43,56 @@ namespace IAMService.Controllers
             return Ok(result);
         }
 
-
-        // SWAGGER: Shows two input fields.
-        // URL: POST api/auth/login?identifier=me@test.com&password=123
+        [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromQuery] string identifier, [FromQuery] string password)
+        public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
-            var result = await _authService.LoginUserAsync(identifier, password);
+            var result = await _authService.LoginUserAsync(request.Identifier, request.Password);
             if (!result.Success) return Unauthorized(result.Errors);
             return Ok(result);
         }
 
-        // SWAGGER: Shows one input field.
-        // URL: POST api/auth/refresh?refreshToken=abc...
-        [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromQuery] string refreshToken)
-        {
-            var result = await _authService.RefreshUserAsync(refreshToken);
-            if (!result.Success) return Unauthorized(result.Errors);
-            return Ok(result);
-        }
-
-        // SWAGGER: Shows one input field.
-        // URL: POST api/auth/logout?refreshToken=abc...
+        [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromQuery] string refreshToken)
+        public async Task<IActionResult> Logout([FromBody] LogOutRequestDto request)
         {
-            var result = await _authService.LogoutUserAsync(refreshToken);
+            var result = await _authService.LogoutUserAsync(request.RefreshTokenString);
             if (!result.Success) return BadRequest(result.Errors);
             return Ok(new { message = result.Message });
         }
+
+        [Authorize]
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto request)
+        {
+            var result = await _authService.RefreshUserAsync(request.RefreshTokenString);
+            if (!result.Success) return Unauthorized(result.Errors);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+        {
+            // Just get the user ID from token
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            //Generic errors needs to be fixed
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "NON_VALID_OPERATION" });
+            }
+
+            var passwordChanged = await _credService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+
+            if (passwordChanged.Succeeded)
+            {
+                return Ok(new { message = "USER_PASSWORD_CHANGED" });
+            }
+
+            return Unauthorized(new { message = "NON_VALID_OPERATION" });
+        }
+
     }
 }

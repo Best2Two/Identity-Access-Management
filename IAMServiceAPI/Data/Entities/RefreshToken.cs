@@ -17,5 +17,7 @@ public class RefreshToken
 
     public bool IsRevoked { get; init; }
     public DateTime IssuedAt { get; set; }
+    
+    public DateTime RevokedAt { get; init; }
     public DateTime ExpiryDate { get; set; }
 }

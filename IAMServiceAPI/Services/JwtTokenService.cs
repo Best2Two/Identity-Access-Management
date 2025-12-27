@@ -1,4 +1,5 @@
-﻿using IAMService.Data.Entities;
+﻿using IAMService.Data;
+using IAMService.Data.Entities;
 using IAMService.Data.Identities;
 using IAMService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;

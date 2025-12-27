@@ -1,5 +1,4 @@
-﻿using IAMService.Data.DTOs;
-using IAMService.Data.Identities;
+﻿using IAMService.Data.Identities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +22,8 @@ namespace IAMService.Data
                 entity.HasOne(rt => rt.User)
                       .WithMany()
                       .HasForeignKey(rt => rt.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      //NoAction instead of Cascade because I will make the DB Enginer triggers deal with the deletion
+                      .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }

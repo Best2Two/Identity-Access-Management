@@ -1,9 +1,10 @@
 ﻿using IAMService.Data.Identities;
+using IAMService.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
 namespace IAMService.Services
 {
-    public class CredentialService
+    public class CredentialService:ICredentialService
     {
         private readonly UserManager<ApplicationUserIdentity> _userManager;
 
@@ -11,9 +12,9 @@ namespace IAMService.Services
         {
             _userManager = userManager;
         }
-        public async Task<IdentityResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
+        public async Task<IdentityResult> ChangePasswordAsync(string userIdClaim, string currentPassword, string newPassword)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userManager.FindByIdAsync(userIdClaim);
 
             if (user == null)
             {
