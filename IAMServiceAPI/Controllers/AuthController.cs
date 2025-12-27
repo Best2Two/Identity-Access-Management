@@ -2,9 +2,10 @@
 using IAMService.Data.DTOs.Controllers.Request;
 using IAMService.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+
+//Controller is for testing purposes only!
 
 namespace IAMService.Controllers
 {
